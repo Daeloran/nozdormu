@@ -7,6 +7,8 @@ export function announcement(entry, settings) {
       return `Exercice ${entry.exercise} sur ${settings.exercises}, série ${entry.set} sur ${settings.sets}`;
     case "rest":
       return "Repos";
+    case "setRest":
+      return `Fin de la série ${entry.set} sur ${settings.sets}, repos`;
     case "cooldown":
       return "Récupération";
   }
