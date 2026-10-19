@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTimeline, totalDuration } from "../../src/timeline.js";
+import * as timeline from "../../src/timeline.js";
+
+const { buildTimeline, totalDuration } = timeline;
+// accès différé : tant que withSetRest n'existe pas, seuls ses tests échouent
+const withSetRest = (settings) => timeline.withSetRest(settings);
 import { announcement } from "../../src/announce.js";
 import { createStore } from "../../src/store.js";
 
@@ -104,6 +108,20 @@ test("setRest absent : déroulé v1 inchangé (repos normal entre les séries)",
   ]);
 });
 
+test("setRest explicite égal à rest : phases \"setRest\" entre les séries (pas \"rest\")", () => {
+  assert.deepEqual(buildTimeline({ prep: 10, work: 30, rest: 15, exercises: 2, sets: 2, cooldown: 60, setRest: 15 }), [
+    e("prep", 10),
+    e("work", 30, 1, 1),
+    e("rest", 15, 1, 1),
+    e("work", 30, 1, 2),
+    e("setRest", 15, 1, 2),
+    e("work", 30, 2, 1),
+    e("rest", 15, 2, 1),
+    e("work", 30, 2, 2),
+    e("cooldown", 60),
+  ]);
+});
+
 test("1 seule série : aucune phase setRest", () => {
   const tl = buildTimeline({ ...WITH_SET_REST, sets: 1 });
   assert.deepEqual(tl, [
@@ -186,23 +204,6 @@ function memoryStorage() {
 const V1_A = { prep: 10, work: 30, rest: 15, exercises: 2, sets: 2, cooldown: 60 };
 const V1_B = { prep: 0, work: 20, rest: 10, exercises: 8, sets: 1, cooldown: 0 };
 
-test("store : derniers réglages v1 (sans setRest) relus avec setRest = rest", () => {
-  const storage = memoryStorage();
-  createStore(storage).setLastSettings(V1_A);
-  assert.deepEqual(createStore(storage).getLastSettings(), { ...V1_A, setRest: 15 });
-});
-
-test("store : préréglages v1 (sans setRest) relus avec setRest = rest", () => {
-  const storage = memoryStorage();
-  const a = createStore(storage);
-  a.savePreset("Tabata", V1_A);
-  a.savePreset("Abdos", V1_B);
-  assert.deepEqual(createStore(storage).listPresets(), [
-    { name: "Abdos", settings: { ...V1_B, setRest: 10 } },
-    { name: "Tabata", settings: { ...V1_A, setRest: 15 } },
-  ]);
-});
-
 test("store : un setRest présent est conservé tel quel (y compris 0)", () => {
   const storage = memoryStorage();
   const a = createStore(storage);
@@ -221,4 +222,33 @@ test("store : un setRest présent est conservé tel quel (y compris 0)", () => {
 
   b.setLastSettings(withLong);
   assert.deepEqual(createStore(storage).getLastSettings(), withLong);
+});
+
+// ---------- withSetRest ----------
+
+test("withSetRest : setRest absent → copie avec setRest = rest", () => {
+  const v1 = { prep: 10, work: 30, rest: 15, exercises: 2, sets: 2, cooldown: 60 };
+  assert.deepEqual(withSetRest(v1), { ...v1, setRest: 15 });
+  const v1b = { prep: 0, work: 20, rest: 0, exercises: 8, sets: 1, cooldown: 0 };
+  assert.deepEqual(withSetRest(v1b), { ...v1b, setRest: 0 });
+});
+
+test("withSetRest : setRest présent (dont 0) → réglages inchangés", () => {
+  const long = { prep: 10, work: 30, rest: 15, exercises: 2, sets: 2, cooldown: 60, setRest: 90 };
+  const zero = { prep: 10, work: 30, rest: 15, exercises: 2, sets: 2, cooldown: 60, setRest: 0 };
+  assert.deepEqual(withSetRest(long), { ...long });
+  assert.deepEqual(withSetRest(zero), { ...zero });
+});
+
+test("withSetRest : l'objet reçu n'est pas modifié", () => {
+  const v1 = { prep: 10, work: 30, rest: 15, exercises: 2, sets: 2, cooldown: 60 };
+  const before = { ...v1 };
+  const out = withSetRest(v1);
+  assert.deepEqual(v1, before);
+  assert.equal("setRest" in v1, false);
+  assert.notEqual(out, v1);
+
+  const zero = { ...before, setRest: 0 };
+  withSetRest(zero);
+  assert.deepEqual(zero, { ...before, setRest: 0 });
 });
