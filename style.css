@@ -10,6 +10,13 @@
   --work: #c53030;
   --rest: #2f855a;
   --cooldown: #2b6cb0;
+  --set-rest: #6b46c1;
+  /* Teintes claires des phases, lisibles en texte sur fond sombre */
+  --prep-text: #f6c453;
+  --work-text: #fc8181;
+  --rest-text: #68d391;
+  --cooldown-text: #63b3ed;
+  --set-rest-text: #b794f4;
   --radius: 14px;
   color-scheme: dark;
 }
@@ -88,6 +95,13 @@ button { cursor: pointer; touch-action: manipulation; }
   padding: 10px 10px 10px 16px;
 }
 .label { color: var(--muted); }
+.field[data-key="prep"] .label,
+.field[data-key="sets"] .label { color: var(--prep-text); }
+.field[data-key="work"] .label { color: var(--work-text); }
+.field[data-key="rest"] .label { color: var(--rest-text); }
+.field[data-key="exercises"] .label,
+.field[data-key="cooldown"] .label { color: var(--cooldown-text); }
+.field[data-key="setRest"] .label { color: var(--set-rest-text); }
 .stepper { display: flex; align-items: center; gap: 6px; }
 .stepper button {
   width: 44px;
@@ -125,6 +139,7 @@ button { cursor: pointer; touch-action: manipulation; }
 #session[data-phase="work"] { --phase-color: var(--work); }
 #session[data-phase="rest"] { --phase-color: var(--rest); }
 #session[data-phase="cooldown"] { --phase-color: var(--cooldown); }
+#session[data-phase="setRest"] { --phase-color: var(--set-rest); }
 #session.paused .remaining { opacity: .45; }
 
 .session-top { display: flex; flex-direction: column; gap: 6px; padding-top: 24px; }

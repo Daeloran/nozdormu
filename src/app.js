@@ -1,13 +1,13 @@
-import { buildTimeline, totalDuration } from "./timeline.js";
+import { buildTimeline, totalDuration, withSetRest } from "./timeline.js";
 import { stateAt, cuesBetween } from "./engine.js";
 import { announcement } from "./announce.js";
 import { createStore } from "./store.js";
 import { formatDuration, parseDuration } from "./format.js";
 import { unlock, beepShort, beepLong, beepEnd, speak } from "./audio.js";
 
-const DEFAULTS = { prep: 10, work: 30, rest: 15, exercises: 5, sets: 3, cooldown: 60 };
+const DEFAULTS = { prep: 10, work: 30, rest: 15, exercises: 5, sets: 3, setRest: 60, cooldown: 60 };
 const LIMITS = { duration: 5999, count: 99 };
-const PHASE_NAMES = { prep: "Préparation", work: "Exercice", rest: "Repos", cooldown: "Récupération" };
+const PHASE_NAMES = { prep: "Préparation", work: "Exercice", rest: "Repos", setRest: "Repos série", cooldown: "Récupération" };
 
 const $ = (id) => document.getElementById(id);
 
@@ -31,7 +31,8 @@ function isValid(settings) {
   }
 }
 
-let settings = { ...DEFAULTS, ...store.getLastSettings() };
+const lastSettings = store.getLastSettings();
+let settings = lastSettings ? { ...DEFAULTS, ...withSetRest(lastSettings) } : { ...DEFAULTS };
 if (!isValid(settings)) settings = { ...DEFAULTS };
 let currentPreset = null;
 
@@ -142,7 +143,7 @@ function onSettingsChanged() {
   store.setLastSettings(settings);
   if (currentPreset) {
     const preset = store.listPresets().find((p) => p.name === currentPreset);
-    if (!preset || !sameSettings(preset.settings, settings)) {
+    if (!preset || !sameSettings(withSetRest(preset.settings), settings)) {
       currentPreset = null;
       renderPresets();
     }
@@ -165,7 +166,7 @@ $("preset-select").addEventListener("change", (event) => {
   const preset = store.listPresets().find((p) => p.name === name);
   if (preset && isValid(preset.settings)) {
     currentPreset = name;
-    settings = { ...preset.settings };
+    settings = { ...DEFAULTS, ...withSetRest(preset.settings) };
     store.setLastSettings(settings);
     renderFields();
   } else {
