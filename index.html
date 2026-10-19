@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Nozdormu</title>
+  <meta name="theme-color" content="#14161c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nozdormu">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <!-- Réglages -->
+  <main id="setup" class="screen">
+    <header class="bar">
+      <h1>Nozdormu</h1>
+      <button id="open-history" class="ghost" type="button">Historique</button>
+    </header>
+
+    <section class="presets">
+      <select id="preset-select" aria-label="Préréglage">
+        <option value="">Séance libre</option>
+      </select>
+      <button id="preset-save" class="ghost" type="button">Enregistrer</button>
+      <button id="preset-delete" class="ghost danger" type="button" hidden>Supprimer</button>
+    </section>
+
+    <section class="fields">
+      <div class="field" data-key="prep" data-kind="duration" data-step="5" data-min="0">
+        <span class="label">Préparation</span>
+      </div>
+      <div class="field" data-key="work" data-kind="duration" data-step="5" data-min="1">
+        <span class="label">Exercice</span>
+      </div>
+      <div class="field" data-key="rest" data-kind="duration" data-step="5" data-min="0">
+        <span class="label">Repos</span>
+      </div>
+      <div class="field" data-key="exercises" data-kind="count" data-step="1" data-min="1">
+        <span class="label">Exercices par série</span>
+      </div>
+      <div class="field" data-key="sets" data-kind="count" data-step="1" data-min="1">
+        <span class="label">Séries</span>
+      </div>
+      <div class="field" data-key="cooldown" data-kind="duration" data-step="5" data-min="0">
+        <span class="label">Récupération finale</span>
+      </div>
+    </section>
+
+    <footer class="start">
+      <p id="total" class="total"></p>
+      <button id="start" class="primary" type="button">Démarrer</button>
+    </footer>
+  </main>
+
+  <!-- Séance -->
+  <main id="session" class="screen" hidden>
+    <div class="session-top">
+      <span id="phase-name" class="phase-name"></span>
+      <span id="phase-detail" class="phase-detail"></span>
+    </div>
+    <div id="remaining" class="remaining">0:00</div>
+    <div class="progress"><div id="progress-bar"></div></div>
+    <p id="session-left" class="session-left"></p>
+    <div class="controls">
+      <button id="stop" class="round" type="button" aria-label="Arrêter">■</button>
+      <button id="pause" class="round big" type="button" aria-label="Pause">❚❚</button>
+      <button id="skip" class="round" type="button" aria-label="Passer la phase">▶▶</button>
+    </div>
+  </main>
+
+  <!-- Fin de séance -->
+  <main id="done" class="screen" hidden>
+    <div class="done-box">
+      <h2>Séance terminée</h2>
+      <p id="done-summary"></p>
+      <button id="done-back" class="primary" type="button">Retour</button>
+    </div>
+  </main>
+
+  <!-- Historique -->
+  <main id="history" class="screen" hidden>
+    <header class="bar">
+      <button id="history-back" class="ghost" type="button">‹ Retour</button>
+      <h1>Historique</h1>
+    </header>
+    <ol id="history-list" class="history-list"></ol>
+    <p id="history-empty" class="empty">Aucune séance pour l'instant.</p>
+  </main>
+</body>
+</html>
