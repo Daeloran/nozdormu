@@ -1,14 +1,14 @@
+// Libellés courts : un mot par phase, joués en clip audio (voir audio.js).
 export function announcement(entry, settings) {
   if (entry === null) return "Séance terminée";
   switch (entry.phase) {
     case "prep":
       return "Préparation";
     case "work":
-      return `Exercice ${entry.exercise} sur ${settings.exercises}, série ${entry.set} sur ${settings.sets}`;
+      return "Exercice";
     case "rest":
-      return "Repos";
     case "setRest":
-      return `Fin de la série ${entry.set} sur ${settings.sets}, repos`;
+      return "Repos";
     case "cooldown":
       return "Récupération";
   }

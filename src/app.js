@@ -3,7 +3,7 @@ import { stateAt, cuesBetween } from "./engine.js";
 import { announcement } from "./announce.js";
 import { createStore } from "./store.js";
 import { formatDuration, parseDuration } from "./format.js";
-import { unlock, beepShort, beepLong, beepEnd, speak } from "./audio.js";
+import { unlock, beepShort, beepLong, beepEnd, speak, silence } from "./audio.js";
 
 const DEFAULTS = { prep: 10, work: 30, rest: 15, exercises: 5, sets: 3, setRest: 60, cooldown: 60 };
 const LIMITS = { duration: 5999, count: 99 };
@@ -280,7 +280,7 @@ function playCues(cues) {
     }
     if (cue.type === "end") {
       beepEnd();
-      speak(announcement(null, run.settings));
+      speak(announcement(null, run.settings), 1.4);
     }
   }
 }
@@ -346,7 +346,7 @@ $("pause").addEventListener("click", () => {
     run.base = elapsedNow();
     run.running = false;
     cancelAnimationFrame(run.frame);
-    window.speechSynthesis?.cancel();
+    silence();
   } else {
     run.t0 = performance.now();
     run.running = true;
@@ -382,7 +382,7 @@ $("stop").addEventListener("click", () => {
   if (!run || !confirm("Arrêter la séance ?")) return;
   record(false);
   endRun();
-  window.speechSynthesis?.cancel();
+  silence();
   show("setup");
 });
 

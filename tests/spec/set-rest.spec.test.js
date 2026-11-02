@@ -173,20 +173,11 @@ test("setRest invalide refusé par RangeError", async (t) => {
 
 // ---------- announcement ----------
 
-test("setRest → « Fin de la série {s} sur {M}, repos »", () => {
+test("setRest → « Repos »", () => {
   const settings = { prep: 10, work: 30, rest: 15, exercises: 4, sets: 3, cooldown: 60, setRest: 90 };
-  assert.equal(
-    announcement({ phase: "setRest", duration: 90, set: 1, exercise: 4 }, settings),
-    "Fin de la série 1 sur 3, repos",
-  );
-  assert.equal(
-    announcement({ phase: "setRest", duration: 90, set: 2, exercise: 4 }, settings),
-    "Fin de la série 2 sur 3, repos",
-  );
-  assert.equal(
-    announcement({ phase: "setRest", duration: 90, set: 4, exercise: 1 }, { ...settings, sets: 5 }),
-    "Fin de la série 4 sur 5, repos",
-  );
+  assert.equal(announcement({ phase: "setRest", duration: 90, set: 1, exercise: 4 }, settings), "Repos");
+  assert.equal(announcement({ phase: "setRest", duration: 90, set: 2, exercise: 4 }, settings), "Repos");
+  assert.equal(announcement({ phase: "setRest", duration: 90, set: 4, exercise: 1 }, { ...settings, sets: 5 }), "Repos");
 });
 
 // ---------- store ----------

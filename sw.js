@@ -1,5 +1,5 @@
 // Incrémenter VERSION à chaque déploiement pour invalider le cache.
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `nozdormu-${VERSION}`;
 const ASSETS = [
   "./",
@@ -13,6 +13,11 @@ const ASSETS = [
   "src/format.js",
   "src/store.js",
   "src/timeline.js",
+  "audio/preparation.mp3",
+  "audio/exercice.mp3",
+  "audio/repos.mp3",
+  "audio/recuperation.mp3",
+  "audio/seance-terminee.mp3",
   "icons/icon.svg",
   "icons/apple-touch-icon.png",
   "icons/icon-192.png",
