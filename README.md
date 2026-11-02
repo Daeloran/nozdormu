@@ -20,7 +20,8 @@ Les préréglages et l'historique restent dans le téléphone (`localStorage` de
 ## Limites iOS
 
 - Le son ne joue qu'écran allumé et appli au premier plan (JavaScript suspendu sinon). L'appli garde l'écran allumé pendant la séance.
-- Les bips sont en mode « ambient » pour se mêler à la musique : le **commutateur silencieux** de l'iPhone les coupe.
+- Bips et annonces passent par Web Audio en mode « ambient » pour se mêler à la musique sans la baisser : le **commutateur silencieux** de l'iPhone les coupe.
+- Les annonces sont des clips pré-enregistrés (`audio/*.mp3`, voix Piper `fr_FR-siwis-medium`) : la synthèse vocale d'iOS baisse ou coupe la musique.
 - Pas de vibrations (API absente sur iOS).
 
 ## Déployer une nouvelle version
