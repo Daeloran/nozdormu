@@ -2,6 +2,7 @@ const KEYS = {
   last: "nozdormu.lastSettings",
   presets: "nozdormu.presets",
   history: "nozdormu.history",
+  backgroundSound: "nozdormu.backgroundSound",
 };
 
 export function createStore(storage) {
@@ -40,6 +41,10 @@ export function createStore(storage) {
     deletePreset(name) {
       write(KEYS.presets, readList(KEYS.presets).filter((p) => p.name !== name));
     },
+
+    // Son en arrière-plan : activé par défaut.
+    getBackgroundSound: () => read(KEYS.backgroundSound, (v) => typeof v === "boolean") ?? true,
+    setBackgroundSound: (enabled) => write(KEYS.backgroundSound, enabled),
 
     addHistory(entry) {
       write(KEYS.history, [...readList(KEYS.history), entry]);

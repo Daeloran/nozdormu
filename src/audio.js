@@ -3,6 +3,9 @@
 // pré-enregistrés (audio/*.mp3, voix Piper fr_FR-siwis).
 // iOS n'autorise le son qu'après un geste : unlock() doit être appelé
 // depuis un gestionnaire de clic.
+// Les sons de la séance sont programmés d'avance sur l'horloge de
+// l'AudioContext (schedule) : ils sonnent sans JavaScript, donc même page
+// suspendue, tant qu'iOS laisse tourner le contexte (session « playback »).
 
 const CLIPS = ["Préparation", "Exercice", "Repos", "Récupération", "Séance terminée"];
 // Volumes volontairement bas : le minuteur reste en fond sous la musique.
@@ -12,7 +15,8 @@ const VOICE_GAIN = 0.5;
 
 let ctx = null;
 const clips = new Map(); // libellé → Promise<AudioBuffer>
-let current = null;
+let scheduled = []; // sources programmées, arrêtées par cancel()
+let generation = 0; // invalide les clips encore en chargement après cancel()
 
 // « Séance terminée » → « seance-terminee »
 export function clipName(text) {
@@ -23,11 +27,13 @@ export function clipName(text) {
     .replace(/\s+/g, "-");
 }
 
-export function unlock() {
-  // « ambient » : le son se mêle à la musique au lieu de la couper (Safari 17+).
+export function unlock(background = false) {
+  // « playback » : le son continue appli en fond et écran verrouillé, mais
+  // iOS met en pause la musique des autres applis.
+  // « ambient » : le son se mêle à la musique, seulement au premier plan.
   if (navigator.audioSession) {
     try {
-      navigator.audioSession.type = "ambient";
+      navigator.audioSession.type = background ? "playback" : "ambient";
     } catch {}
   }
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -54,11 +60,19 @@ function loadClips() {
   }
 }
 
-function tone(frequency, duration, delay = 0, level = BEEP_GAIN) {
-  if (!ctx) return;
-  if (ctx.state !== "running") ctx.resume();
-  const start = ctx.currentTime + delay;
-  const osc = ctx.createOscillator();
+// Horloge audio (secondes), null si pas de contexte actif.
+export function audioTime() {
+  return ctx && ctx.state === "running" ? ctx.currentTime : null;
+}
+
+function track(node) {
+  scheduled.push(node);
+  return node;
+}
+
+function tone(frequency, duration, at, level = BEEP_GAIN) {
+  const start = Math.max(at, ctx.currentTime); // déjà échu : tout de suite
+  const osc = track(ctx.createOscillator());
   const gain = ctx.createGain();
   osc.type = "sine";
   osc.frequency.value = frequency;
@@ -70,42 +84,65 @@ function tone(frequency, duration, delay = 0, level = BEEP_GAIN) {
   osc.stop(start + duration + 0.02);
 }
 
-export const beepShort = () => tone(880, 0.15);
-export const beepLong = () => tone(1320, 0.4, 0, PHASE_GAIN);
-export const beepEnd = () => {
-  tone(1320, 0.25, 0, PHASE_GAIN);
-  tone(1320, 0.25, 0.3, PHASE_GAIN);
-  tone(1760, 0.7, 0.6, PHASE_GAIN);
+const SOUNDS = {
+  short: (at) => tone(880, 0.15, at),
+  long: (at) => tone(1320, 0.4, at, PHASE_GAIN),
+  end: (at) => {
+    tone(1320, 0.25, at, PHASE_GAIN);
+    tone(1320, 0.25, at + 0.3, PHASE_GAIN);
+    tone(1760, 0.7, at + 0.6, PHASE_GAIN);
+  },
 };
 
-// Joue le clip du libellé, après le bip (delay en secondes).
-// Au premier lancement, le clip peut être encore en chargement : on l'attend.
-export function speak(text, delay = 0.35) {
+// Clip programmé à `at` ; coupé à `until` (annonce suivante).
+// Au premier lancement, le clip peut être encore en chargement : on l'attend,
+// et on le joue en retard s'il l'est de peu.
+function voice(text, at, until) {
   const clip = clips.get(text);
-  if (!ctx || !clip) return;
-  const at = ctx.currentTime + delay;
-  silence();
-  const token = {};
-  current = token;
+  if (!clip) return;
+  const token = generation;
   clip.then((buffer) => {
-    if (buffer && current === token) play(buffer, Math.max(at, ctx.currentTime));
+    if (!buffer || token !== generation) return;
+    const start = Math.max(at, ctx.currentTime);
+    if (start - at > 1 || (until !== undefined && start >= until)) return;
+    const source = track(ctx.createBufferSource());
+    const gain = ctx.createGain();
+    source.buffer = buffer;
+    gain.gain.value = VOICE_GAIN;
+    source.connect(gain).connect(ctx.destination);
+    source.start(start);
+    if (until !== undefined) source.stop(until);
   });
 }
 
-function play(buffer, at) {
-  if (ctx.state !== "running") ctx.resume();
-  const source = ctx.createBufferSource();
-  const gain = ctx.createGain();
-  source.buffer = buffer;
-  gain.gain.value = VOICE_GAIN;
-  source.connect(gain).connect(ctx.destination);
-  source.start(at);
-  current = source;
+// Programme les sons d'un plan (voir engine.soundPlan) : un son d'instant `at`
+// sonne à l'heure audio `origin + at`. Remplace toute programmation précédente.
+export function schedule(plan, origin) {
+  cancel();
+  if (!ctx) return;
+  // Boucle muette : garde le contexte actif entre deux sons.
+  const keepAlive = track(ctx.createBufferSource());
+  keepAlive.buffer = ctx.createBuffer(1, 22050, 22050);
+  keepAlive.loop = true;
+  keepAlive.connect(ctx.destination);
+  keepAlive.start();
+  // Arrêtée après le dernier son, même si la page est suspendue à ce moment-là.
+  keepAlive.stop(origin + (plan.at(-1)?.at ?? 0) + 3);
+
+  const voices = plan.filter((item) => item.sound === "voice");
+  voices.forEach((item, i) => {
+    const next = voices[i + 1];
+    voice(item.text, origin + item.at, next && origin + next.at);
+  });
+  for (const item of plan) SOUNDS[item.sound]?.(origin + item.at);
 }
 
-export function silence() {
-  try {
-    current?.stop?.();
-  } catch {}
-  current = null;
+export function cancel() {
+  generation++;
+  for (const node of scheduled) {
+    try {
+      node.stop();
+    } catch {}
+  }
+  scheduled = [];
 }

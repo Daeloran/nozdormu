@@ -1,9 +1,9 @@
 import { buildTimeline, totalDuration, withSetRest } from "./timeline.js";
-import { stateAt, cuesBetween } from "./engine.js";
+import { stateAt, cuesBetween, soundPlan } from "./engine.js";
 import { announcement } from "./announce.js";
 import { createStore } from "./store.js";
 import { formatDuration, parseDuration } from "./format.js";
-import { unlock, beepShort, beepLong, beepEnd, speak, silence } from "./audio.js";
+import { unlock, schedule, cancel, audioTime } from "./audio.js";
 
 const DEFAULTS = { prep: 10, work: 30, rest: 15, exercises: 5, sets: 3, setRest: 60, cooldown: 60 };
 const LIMITS = { duration: 5999, count: 99 };
@@ -35,6 +35,7 @@ const lastSettings = store.getLastSettings();
 let settings = lastSettings ? { ...DEFAULTS, ...withSetRest(lastSettings) } : { ...DEFAULTS };
 if (!isValid(settings)) settings = { ...DEFAULTS };
 let currentPreset = null;
+let backgroundSound = store.getBackgroundSound();
 
 // ---------- écrans ----------
 
@@ -215,7 +216,7 @@ function elapsedNow() {
 }
 
 function startSession() {
-  unlock();
+  unlock(backgroundSound);
   const timeline = buildTimeline(settings);
   const starts = [];
   let t = 0;
@@ -233,7 +234,8 @@ function startSession() {
     base: 0,
     t0: performance.now(),
     running: true,
-    last: -1, // le signal de la première phase tombe dans ]-1, 0]
+    heard: -1, // sons joués jusqu'à cet instant ; le signal de la première phase tombe dans ]-1, 0]
+    origin: null, // heure audio du début de séance, null si rien n'est programmé
     recorded: false,
     frame: null,
   };
@@ -248,18 +250,12 @@ function startSession() {
 function tick() {
   if (!run) return;
   const elapsed = elapsedNow();
-  const gap = elapsed - run.last;
-  let cues = cuesBetween(run.timeline, run.last, elapsed);
-  run.last = elapsed;
-
-  if (gap > 1.5) {
-    // Retour après une mise en veille : pas de rafale de bips, juste la phase en cours.
-    const hadPhaseChange = cues.some((c) => c.type !== "countdown");
-    cues = [];
-    const state = stateAt(run.timeline, elapsed);
-    if (hadPhaseChange && !state.done) speak(announcement(state.entry, run.settings));
+  const now = audioTime();
+  // Sons à (re)programmer : au démarrage, à la reprise, après un saut, ou si
+  // l'horloge audio a décroché du minuteur (contexte suspendu par iOS).
+  if (now !== null && (run.origin === null || Math.abs(now - run.origin - elapsed) > 0.5)) {
+    sync(now, elapsed);
   }
-  playCues(cues);
 
   const state = stateAt(run.timeline, elapsed);
   if (state.done) {
@@ -270,19 +266,22 @@ function tick() {
   run.frame = requestAnimationFrame(tick);
 }
 
-function playCues(cues) {
-  const phaseStarts = new Set(cues.filter((c) => c.type === "phase").map((c) => c.at));
-  for (const cue of cues) {
-    if (cue.type === "countdown" && !phaseStarts.has(cue.at)) beepShort();
-    if (cue.type === "phase") {
-      beepLong();
-      speak(announcement(run.timeline[cue.index], run.settings));
+function sync(now, elapsed) {
+  const heard = run.origin === null ? run.heard : Math.min(elapsed, now - run.origin);
+  let plan;
+  if (elapsed - heard > 1.5) {
+    // Retour après une suspension : pas de rafale de bips, juste la phase en cours.
+    const missed = cuesBetween(run.timeline, heard, elapsed);
+    plan = soundPlan(run.timeline, run.settings, elapsed);
+    const state = stateAt(run.timeline, elapsed);
+    if (missed.some((c) => c.type !== "countdown") && !state.done) {
+      plan.unshift({ at: elapsed, sound: "voice", text: announcement(state.entry, run.settings) });
     }
-    if (cue.type === "end") {
-      beepEnd();
-      speak(announcement(null, run.settings), 1.4);
-    }
+  } else {
+    plan = soundPlan(run.timeline, run.settings, heard);
   }
+  run.origin = now - elapsed;
+  schedule(plan, run.origin);
 }
 
 function nextWork(index) {
@@ -341,12 +340,14 @@ function finish(completed) {
 
 $("pause").addEventListener("click", () => {
   if (!run) return;
-  unlock();
+  unlock(backgroundSound);
   if (run.running) {
     run.base = elapsedNow();
     run.running = false;
     cancelAnimationFrame(run.frame);
-    silence();
+    cancel();
+    run.heard = run.base;
+    run.origin = null;
   } else {
     run.t0 = performance.now();
     run.running = true;
@@ -365,10 +366,13 @@ $("skip").addEventListener("click", () => {
   // Juste avant le début de la phase suivante : son signal est émis au prochain tick.
   run.base = next;
   run.t0 = performance.now();
-  run.last = next - 1e-6;
+  run.heard = next - 1e-6;
+  run.origin = null;
   if (!run.running) {
-    playCues(cuesBetween(run.timeline, run.last, next));
-    run.last = next;
+    // En pause : seulement le signal de la phase (ou de la fin) rejointe.
+    const now = audioTime();
+    if (now !== null) schedule(soundPlan(run.timeline, run.settings, run.heard).slice(0, 2), now - next);
+    run.heard = next;
     const s = stateAt(run.timeline, next);
     if (s.done) finish(true);
     else renderSession(s, next);
@@ -382,12 +386,18 @@ $("stop").addEventListener("click", () => {
   if (!run || !confirm("Arrêter la séance ?")) return;
   record(false);
   endRun();
-  silence();
+  cancel();
   show("setup");
 });
 
 $("done-back").addEventListener("click", () => show("setup"));
 $("start").addEventListener("click", startSession);
+
+$("background-sound").checked = backgroundSound;
+$("background-sound").addEventListener("change", (event) => {
+  backgroundSound = event.target.checked;
+  store.setBackgroundSound(backgroundSound);
+});
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && run) acquireWakeLock();
