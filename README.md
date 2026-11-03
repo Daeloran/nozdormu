@@ -19,8 +19,9 @@ Les préréglages et l'historique restent dans le téléphone (`localStorage` de
 
 ## Limites iOS
 
-- Le son ne joue qu'écran allumé et appli au premier plan (JavaScript suspendu sinon). L'appli garde l'écran allumé pendant la séance.
-- Bips et annonces passent par Web Audio en mode « ambient » pour se mêler à la musique sans la baisser : le **commutateur silencieux** de l'iPhone les coupe.
+- Les sons de la séance sont programmés d'avance dans Web Audio : ils sonnent même quand iOS suspend le JavaScript.
+- **Son en arrière-plan** (réglage, activé par défaut) : session audio « playback », le son continue appli en fond et écran verrouillé, mais iOS met en pause la musique des autres applis.
+- Réglage désactivé : session « ambient », le son se mêle à la musique sans la baisser, mais seulement écran allumé et appli au premier plan ; le **commutateur silencieux** de l'iPhone le coupe. L'appli garde l'écran allumé pendant la séance.
 - Les annonces sont des clips pré-enregistrés (`audio/*.mp3`, voix Piper `fr_FR-siwis-medium`) : la synthèse vocale d'iOS baisse ou coupe la musique.
 - Pas de vibrations (API absente sur iOS).
 
