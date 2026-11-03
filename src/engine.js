@@ -1,3 +1,5 @@
+import { announcement } from "./announce.js";
+
 // Tout est calculé à partir du temps écoulé (secondes) : pas de compteur
 // incrémenté, donc pas de dérive.
 
@@ -32,4 +34,23 @@ export function cuesBetween(timeline, from, to) {
   }
   if (timeline.length > 0 && inRange(start)) cues.push({ type: "end", at: start });
   return cues;
+}
+
+// Sons de la séance déclenchés strictement après `from`, triés par instant :
+// le minuteur les programme d'avance dans le moteur audio, pour qu'ils
+// sonnent même quand iOS suspend la page (appli en fond, écran verrouillé).
+export function soundPlan(timeline, settings, from) {
+  const plan = [];
+  for (const cue of cuesBetween(timeline, from, Infinity)) {
+    if (cue.type === "phase") {
+      plan.push({ at: cue.at, sound: "long" });
+      plan.push({ at: cue.at + 0.35, sound: "voice", text: announcement(timeline[cue.index], settings) });
+    } else if (cue.type === "countdown") {
+      if (!plan.some((s) => s.sound === "long" && s.at === cue.at)) plan.push({ at: cue.at, sound: "short" });
+    } else {
+      plan.push({ at: cue.at, sound: "end" });
+      plan.push({ at: cue.at + 1.4, sound: "voice", text: announcement(null, settings) });
+    }
+  }
+  return plan.sort((a, b) => a.at - b.at);
 }
