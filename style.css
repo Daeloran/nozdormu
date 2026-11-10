@@ -7,14 +7,14 @@
   --accent: #f0b429;
   --danger: #e5484d;
   --prep: #b7791f;
-  --work: #c53030;
-  --rest: #2f855a;
+  --work: #2f855a;
+  --rest: #c53030;
   --cooldown: #2b6cb0;
   --set-rest: #6b46c1;
   /* Teintes claires des phases, lisibles en texte sur fond sombre */
   --prep-text: #f6c453;
-  --work-text: #fc8181;
-  --rest-text: #68d391;
+  --work-text: #68d391;
+  --rest-text: #fc8181;
   --cooldown-text: #63b3ed;
   --set-rest-text: #b794f4;
   --radius: 14px;
