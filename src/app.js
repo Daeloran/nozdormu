@@ -216,7 +216,7 @@ function elapsedNow() {
 }
 
 function startSession() {
-  unlock(backgroundSound);
+  unlock(backgroundSound, { fresh: true });
   const timeline = buildTimeline(settings);
   const starts = [];
   let t = 0;

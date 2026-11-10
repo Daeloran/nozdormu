@@ -1,5 +1,5 @@
 // Incrémenter VERSION à chaque déploiement pour invalider le cache.
-const VERSION = "v5";
+const VERSION = "v6";
 const CACHE = `nozdormu-${VERSION}`;
 const ASSETS = [
   "./",

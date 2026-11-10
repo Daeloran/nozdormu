@@ -27,7 +27,17 @@ export function clipName(text) {
     .replace(/\s+/g, "-");
 }
 
-export function unlock(background = false) {
+// `fresh` : ferme le contexte existant et en crée un neuf dans le geste, comme
+// au premier lancement. Sur iOS, un contexte resté inactif après une séance ne
+// repart pas toujours avec resume(). Les clips décodés restent utilisables.
+export function unlock(background = false, { fresh = false } = {}) {
+  if (fresh && ctx) {
+    cancel();
+    try {
+      Promise.resolve(ctx.close()).catch(() => {});
+    } catch {}
+    ctx = null;
+  }
   // « playback » : le son continue appli en fond et écran verrouillé, mais
   // iOS met en pause la musique des autres applis.
   // « ambient » : le son se mêle à la musique, seulement au premier plan.

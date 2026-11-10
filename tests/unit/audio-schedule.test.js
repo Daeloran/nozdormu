@@ -127,3 +127,29 @@ test("bip déjà échu (instant audio négatif ou passé) : joué tout de suite,
   const [osc] = sources.filter((s) => s.kind === "osc");
   assert.equal(osc.startedAt, 100);
 });
+
+test("unlock fresh : arrête les sons programmés sur l'ancien contexte", async () => {
+  unlock(true);
+  schedule([{ at: 5, sound: "long" }], 100);
+  const before = sources.filter((s) => s.kind === "osc");
+  assert.ok(before.length > 0);
+  unlock(true, { fresh: true });
+  for (const s of before) assert.ok(s.stopped.includes("now"), "son de l'ancien contexte non arrêté");
+});
+
+test("unlock fresh : tolère un close() absent, qui lève ou qui rejette (anciens Safari)", async () => {
+  const variants = [
+    undefined,
+    () => {
+      throw new Error("close");
+    },
+    () => Promise.reject(new Error("close")),
+  ];
+  for (const close of variants) {
+    FakeContext.prototype.close = close;
+    assert.doesNotThrow(() => unlock(false, { fresh: true }));
+    await flush();
+    assert.equal(audioTime(), 100, "le nouveau contexte doit être utilisable");
+  }
+  delete FakeContext.prototype.close;
+});
